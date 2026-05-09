@@ -2,8 +2,8 @@ const WebSocket = require("ws");
 const ChildBot = require("./childbot");
 const { loadBots, saveBots } = require("./storage");
 const express = require("express");
-const MAIN_USERNAME = "YOUR_MAINBOT_USERNAME";
-const MAIN_PASSWORD = "YOUR_MAINBOT_PASSWORD";
+const MAIN_USERNAME = "pinoy_ako";
+const MAIN_PASSWORD = ".....reu12345.....";
 
 const activeBots = [];
 
@@ -19,7 +19,7 @@ for(let bot of db.bots){
 const app = express();
 
 app.get("/", (req,res)=>{
-    res.send("A3R BOT SYSTEM ONLINE");
+    res.send("FUNBOT ONLINE");
 });
 
 const PORT = process.env.PORT || 8080;
