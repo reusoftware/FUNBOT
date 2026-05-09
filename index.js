@@ -1,7 +1,7 @@
 const WebSocket = require("ws");
 const ChildBot = require("./childbot");
 const { loadBots, saveBots } = require("./storage");
-
+const express = require("express");
 const MAIN_USERNAME = "YOUR_MAINBOT_USERNAME";
 const MAIN_PASSWORD = "YOUR_MAINBOT_PASSWORD";
 
@@ -16,7 +16,17 @@ for(let bot of db.bots){
 
     activeBots.push(new ChildBot(bot));
 }
+const app = express();
 
+app.get("/", (req,res)=>{
+    res.send("A3R BOT SYSTEM ONLINE");
+});
+
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, ()=>{
+    console.log("Web server running on " + PORT);
+});
 // ================= MAIN BOT =================
 const ws = new WebSocket("wss://viberschat.space:8443/server");
 
