@@ -1,3 +1,43 @@
 {
-  "bots": []
+  "mainbots": {
+
+    "mainbot1": {
+
+      "password":"123",
+
+      "childbots":[
+        {
+          "room":"funroom",
+          "username":"bot1",
+          "password":"123456",
+
+          "mainMaster":"owner1",
+
+          "masters":[
+            "owner1"
+          ],
+
+          "settings":{
+            "welcome":true,
+            "quiz":true,
+            "cricket":false
+          },
+
+          "cricket":{
+            "runs":0,
+            "wickets":0,
+            "overs":0
+          }
+        }
+      ]
+    },
+
+    "mainbot2": {
+
+      "password":"456",
+
+      "childbots":[]
+    }
+
+  }
 }
