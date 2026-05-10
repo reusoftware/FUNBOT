@@ -8,23 +8,23 @@ function loadBots() {
 
         if (!fs.existsSync(DB_FILE)) {
 
-            fs.writeFileSync(
-                DB_FILE,
-                JSON.stringify({
-                    mainbots: {}
-                }, null, 2)
-            );
+            return {
+                mainbots: {}
+            };
         }
 
-        let raw =
-            fs.readFileSync(DB_FILE);
+        let data =
+            fs.readFileSync(
+                DB_FILE,
+                "utf8"
+            );
 
-        return JSON.parse(raw);
+        return JSON.parse(data);
 
     } catch (err) {
 
         console.log(
-            "DB LOAD ERROR:",
+            "LOAD DB ERROR:",
             err.message
         );
 
@@ -40,19 +40,24 @@ function saveBots(data) {
 
         fs.writeFileSync(
             DB_FILE,
-            JSON.stringify(data, null, 2)
+            JSON.stringify(
+                data,
+                null,
+                2
+            )
         );
 
     } catch (err) {
 
         console.log(
-            "DB SAVE ERROR:",
+            "SAVE DB ERROR:",
             err.message
         );
     }
 }
 
 module.exports = {
+
     loadBots,
     saveBots
 };
