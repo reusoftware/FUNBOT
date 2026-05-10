@@ -338,24 +338,24 @@ handle(msg) {
 `🤖 FUNBOT COMMANDS
 
 👑 MASTER
-+addmaster username
-+removemaster username
-+masters
+addmas username
+removemas username
+maslist
 
 ⚙ SETTINGS
-+quiz on
-+quiz off
-+welcome on
-+welcome off
-+cricket on
-+cricket off
++quiz
+-quiz
++wc
+-wc
++cc
+-cc
 
 🏏 CRICKET
 +startcricket
-+jointeam
++join
 +bat
 +score
-+resetcricket`
++ccreset
                 );
 
                 return;
@@ -365,7 +365,7 @@ handle(msg) {
             if (isMaster) {
 
                 // QUIZ ON
-                if (text === "+quiz on") {
+                if (text === "+quiz") {
 
                     this.settings.quiz = true;
 
@@ -386,7 +386,7 @@ handle(msg) {
                 }
 
                 // QUIZ OFF
-                if (text === "+quiz off") {
+                if (text === "-quiz") {
 
                     this.settings.quiz = false;
 
@@ -406,7 +406,7 @@ handle(msg) {
                 }
 
                 // WELCOME ON
-                if (text === "+welcome on") {
+                if (text === "+wc") {
 
                     this.settings.welcome = true;
 
@@ -420,7 +420,7 @@ handle(msg) {
                 }
 
                 // WELCOME OFF
-                if (text === "+welcome off") {
+                if (text === "-wc") {
 
                     this.settings.welcome = false;
 
@@ -434,7 +434,7 @@ handle(msg) {
                 }
 
                 // CRICKET ON
-                if (text === "+cricket on") {
+                if (text === "+cc") {
 
                     this.settings.cricket = true;
 
@@ -448,7 +448,7 @@ handle(msg) {
                 }
 
                 // CRICKET OFF
-                if (text === "+cricket off") {
+                if (text === "-cc") {
 
                     this.settings.cricket = false;
 
@@ -463,7 +463,7 @@ handle(msg) {
 
                 // RESET CRICKET
                 if (
-                    text === "+resetcricket"
+                    text === "+ccreset"
                 ) {
 
                     this.cricket = {
@@ -487,13 +487,13 @@ handle(msg) {
             if (
                 isMainMaster &&
                 text.startsWith(
-                    "+addmaster "
+                    "addmas "
                 )
             ) {
 
                 let user =
                     text.replace(
-                        "+addmaster ",
+                        "addmas ",
                         ""
                     ).trim();
 
@@ -527,13 +527,13 @@ added as master`
             if (
                 isMaster &&
                 text.startsWith(
-                    "+removemaster "
+                    "removemas "
                 )
             ) {
 
                 let user =
                     text.replace(
-                        "+removemaster ",
+                        "removemas ",
                         ""
                     ).trim();
 
@@ -565,7 +565,7 @@ added as master`
 
             // ================= MASTER LIST =================
             if (
-                text === "+masters"
+                text === "maslist"
             ) {
 
                 this.send(
@@ -610,7 +610,7 @@ Use:
 
             // ================= JOIN TEAM =================
             if (
-                text === "+jointeam"
+                text === "+join"
             ) {
 
                 if (
