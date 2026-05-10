@@ -167,15 +167,7 @@ function connectMainBot(res) {
         }));
     });
 
-    mainWS.on("message", (raw) => {
-
-        let msg;
-
-        try {
-            msg = JSON.parse(raw);
-        } catch {
-            return;
-        }
+   
 
         console.log("SERVER:", msg);
 mainWS.on("message", (data) => {
