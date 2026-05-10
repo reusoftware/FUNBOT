@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>FUNBOT PANEL</title>
+
+<style>
+
+body{
+    background:#f5f5f5;
+    font-family:Arial;
+}
+
+.box{
+    width:300px;
+    background:white;
+    margin:auto;
+    margin-top:100px;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    background:#4CAF50;
+    color:white;
+    border:none;
+    cursor:pointer;
+}
+
+#status{
+    margin-top:10px;
+    color:green;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<h2>🤖 FUNBOT LOGIN</h2>
+
+<input type="text" id="username" placeholder="MainBot Username">
+
+<input type="password" id="password" placeholder="MainBot Password">
+
+<button onclick="login()">LOGIN</button>
+
+<div id="status"></div>
+
+</div>
+
+<script>
+
+async function login(){
+
+    let username =
+        document.getElementById("username").value;
+
+    let password =
+        document.getElementById("password").value;
+
+    status.innerHTML = "Connecting...";
+
+    try{
+
+        let res = await fetch("/login",{
+
+            method:"POST",
+
+            headers:{
+                "Content-Type":"application/json"
+            },
+
+            body:JSON.stringify({
+                username,
+                password
+            })
+        });
+
+        let data = await res.json();
+
+        if(data.success){
+
+            status.innerHTML =
+                "✅ MainBot Started";
+
+        }else{
+
+            status.innerHTML =
+                "❌ Login Failed";
+        }
+
+    }catch{
+
+        status.innerHTML =
+            "❌ Server Error";
+    }
+}
+
+</script>
+
+</body>
+</html>
