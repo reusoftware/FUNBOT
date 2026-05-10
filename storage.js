@@ -1,28 +1,58 @@
-{
-  "bots": [
-    {
-      "room": "funroom",
-      "username": "bot1",
-      "password": "123456",
+const fs = require("fs");
 
-      "mainMaster": "owner1",
+const DB_FILE = "./bots.json";
 
-      "masters": [
-        "owner1",
-        "admin1"
-      ],
+function loadBots() {
 
-      "settings": {
-        "welcome": true,
-        "quiz": true,
-        "cricket": false
-      },
+    try {
 
-      "cricket": {
-        "runs": 0,
-        "wickets": 0,
-        "overs": 0
-      }
+        if (!fs.existsSync(DB_FILE)) {
+
+            fs.writeFileSync(
+                DB_FILE,
+                JSON.stringify({
+                    mainbots: {}
+                }, null, 2)
+            );
+        }
+
+        let raw =
+            fs.readFileSync(DB_FILE);
+
+        return JSON.parse(raw);
+
+    } catch (err) {
+
+        console.log(
+            "DB LOAD ERROR:",
+            err.message
+        );
+
+        return {
+            mainbots: {}
+        };
     }
-  ]
 }
+
+function saveBots(data) {
+
+    try {
+
+        fs.writeFileSync(
+            DB_FILE,
+            JSON.stringify(data, null, 2)
+        );
+
+    } catch (err) {
+
+        console.log(
+            "DB SAVE ERROR:",
+            err.message
+        );
+    }
+}
+
+module.exports = {
+    loadBots,
+    saveBots
+};
