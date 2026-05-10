@@ -11,7 +11,6 @@ const {
 class ChildBot {
 
     constructor(config, owner) {
-
         this.owner = owner;
 
         this.room = config.room;
