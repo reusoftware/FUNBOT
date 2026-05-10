@@ -2,7 +2,7 @@ const WebSocket = require("ws");
 const ChildBot = require("./childbot");
 const { loadBots, saveBots } = require("./storage");
 const express = require("express");
-const MAIN_USERNAME = "pinoy_ako";
+const MAIN_USERNAME = "moderator";
 const MAIN_PASSWORD = ".....reu12345.....";
 ///
 const activeBots = [];
