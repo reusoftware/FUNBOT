@@ -1,21 +1,28 @@
-const fs = require("fs");
+{
+  "bots": [
+    {
+      "room": "funroom",
+      "username": "bot1",
+      "password": "123456",
 
-const FILE = "bots.json";
+      "mainMaster": "owner1",
 
-function loadBots(){
+      "masters": [
+        "owner1",
+        "admin1"
+      ],
 
-    if(!fs.existsSync(FILE)){
-        fs.writeFileSync(FILE, JSON.stringify({ bots: [] }, null, 2));
+      "settings": {
+        "welcome": true,
+        "quiz": true,
+        "cricket": false
+      },
+
+      "cricket": {
+        "runs": 0,
+        "wickets": 0,
+        "overs": 0
+      }
     }
-
-    return JSON.parse(fs.readFileSync(FILE));
+  ]
 }
-
-function saveBots(data){
-    fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
-}
-
-module.exports = {
-    loadBots,
-    saveBots
-};
