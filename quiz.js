@@ -1,77 +1,103 @@
-function generateQuestion(){
+function random(min, max) {
 
-    const modes = ["math", "word", "guess"];
+    return Math.floor(
+        Math.random() * (max - min + 1)
+    ) + min;
+}
 
-    const type = modes[Math.floor(Math.random() * modes.length)];
+function generateMath() {
 
-    // ================= MATH =================
-    if(type === "math"){
+    let ops = ["+", "-", "*"];
 
-        let ops = ["+", "-", "*"];
-        let op = ops[Math.floor(Math.random() * ops.length)];
+    let op =
+        ops[random(0, ops.length - 1)];
 
-        let a = Math.floor(Math.random() * 20) + 1;
-        let b = Math.floor(Math.random() * 20) + 1;
+    let a = random(1, 20);
+    let b = random(1, 20);
 
-        let answer = 0;
+    let answer = 0;
 
-        if(op === "+") answer = a + b;
+    if (op === "+") {
 
-        if(op === "-"){
-            if(b > a){
-                [a,b] = [b,a];
-            }
-            answer = a - b;
-        }
-
-        if(op === "*"){
-            a = Math.floor(Math.random() * 10) + 1;
-            b = Math.floor(Math.random() * 10) + 1;
-            answer = a * b;
-        }
-
-        return {
-            type,
-            question:`🧮 ${a} ${op} ${b} = ?`,
-            answer:answer.toString().toLowerCase()
-        };
+        answer = a + b;
     }
 
-    // ================= WORD =================
-    if(type === "word"){
+    if (op === "-") {
 
-        let words = [
-            "apple",
-            "banana",
-            "robot",
-            "tiger",
-            "music",
-            "dragon",
-            "house"
-        ];
+        if (b > a) {
 
-        let word = words[Math.floor(Math.random() * words.length)];
+            [a, b] = [b, a];
+        }
 
-        let scrambled = word
-            .split("")
-            .sort(() => Math.random() - 0.5)
-            .join("");
-
-        return {
-            type,
-            question:`🧠 Unscramble: ${scrambled}`,
-            answer:word.toLowerCase()
-        };
+        answer = a - b;
     }
 
-    // ================= GUESS =================
-    let num = Math.floor(Math.random() * 50) + 1;
+    if (op === "*") {
+
+        a = random(1, 10);
+        b = random(1, 10);
+
+        answer = a * b;
+    }
 
     return {
-        type,
-        question:"🎯 Guess number (1-50)",
-        answer:num.toString()
+        question: `🧮 ${a} ${op} ${b} = ?`,
+        answer: answer.toString()
     };
+}
+
+function generateWord() {
+
+    let words = [
+        "apple",
+        "banana",
+        "robot",
+        "dragon",
+        "music",
+        "tiger",
+        "school"
+    ];
+
+    let word =
+        words[random(0, words.length - 1)];
+
+    let scramble =
+        word
+        .split("")
+        .sort(() => Math.random() - 0.5)
+        .join("");
+
+    return {
+        question:
+            `🧠 Unscramble: ${scramble}`,
+        answer: word
+    };
+}
+
+function generateGuess() {
+
+    let number = random(1, 50);
+
+    return {
+        question:
+            "🎯 Guess number (1-50)",
+        answer:
+            number.toString()
+    };
+}
+
+function generateQuestion() {
+
+    let modes = [
+        generateMath,
+        generateWord,
+        generateGuess
+    ];
+
+    let mode =
+        modes[random(0, modes.length - 1)];
+
+    return mode();
 }
 
 module.exports = {
