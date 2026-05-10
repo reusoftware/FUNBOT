@@ -178,7 +178,25 @@ function connectMainBot(res) {
         }
 
         console.log("SERVER:", msg);
+mainWS.on("message", (data) => {
 
+    // 🔥 ALWAYS SHOW RAW DATA FIRST
+    console.log("📩 RAW FROM SERVER:");
+    console.log(data.toString());
+
+    if (loginResponse) {
+        loginResponse.write("RAW: " + data.toString() + "\n");
+    }
+
+    let msg;
+    try {
+        msg = JSON.parse(data);
+    } catch (e) {
+        console.log("❌ JSON PARSE FAILED");
+        return;
+    }
+
+    console.log("📦 PARSED:", msg);
         // ================= LOGIN RESPONSE =================
         if (msg.handler === "3rd_login") {
 
