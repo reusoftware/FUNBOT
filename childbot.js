@@ -251,312 +251,144 @@ ${this.currentAnswer}`
             }, 15000);
     }
 
-    // ================= HANDLE =================
-    handle(msg) {
+  // ================= HANDLE =================
+handle(msg) {
 
-        switch (msg.handler) {
+    switch (msg.handler) {
 
-            // ================= LOGIN =================
-            case "3rd_login":
+        // ================= LOGIN =================
+        case "3rd_login":
 
-                this.joinRoom();
+            this.joinRoom();
 
-                setTimeout(() => {
+            setTimeout(() => {
+
+                if (
+                    this.settings.quiz &&
+                    this.currentAnswer === null
+                ) {
+
+                    this.nextQuestion();
+                }
+
+            }, 5000);
+
+        break;
+
+        // ================= WELCOME =================
+        case "room_presence":
+
+            if (this.settings.welcome) {
+
+                let username =
+                    msg.username ||
+                    msg.payload?.username;
+
+                if (
+                    username &&
+                    username !== this.username
+                ) {
+
+                    this.send(
+                        `👋 Welcome ${username}!`
+                    );
+                }
+            }
+
+        break;
+
+        // ================= ROOM MESSAGE =================
+        case "room_msg":
+
+            let m = msg.message;
+
+            if (!m || !m.body)
+                return;
+
+            let text =
+                m.body
+                .toLowerCase()
+                .trim();
+
+            let sender =
+                m.sender;
+
+            // ignore self
+            if (
+                sender === this.username
+            ) return;
+
+            // ================= MASTER =================
+            let isMaster =
+                this.masters.includes(
+                    sender
+                );
+
+            let isMainMaster =
+                sender ===
+                this.mainMaster;
+
+            // ================= HELP =================
+            if (
+                text === "help" &&
+                isMaster
+            ) {
+
+                this.send(
+`🤖 FUNBOT COMMANDS
+
+👑 MASTER
++addmaster username
++removemaster username
++masters
+
+⚙ SETTINGS
++quiz on
++quiz off
++welcome on
++welcome off
++cricket on
++cricket off
+
+🏏 CRICKET
++startcricket
++jointeam
++bat
++score
++resetcricket`
+                );
+
+                return;
+            }
+
+            // ================= SETTINGS =================
+            if (isMaster) {
+
+                // QUIZ ON
+                if (text === "+quiz on") {
+
+                    this.settings.quiz = true;
+
+                    this.saveConfig();
+
+                    this.send(
+                        "✅ Quiz ON"
+                    );
 
                     if (
-                        this.settings.quiz &&
                         this.currentAnswer === null
                     ) {
 
                         this.nextQuestion();
                     }
 
-                }, 5000);
-
-            break;
-
-            // ================= WELCOME =================
-            case "room_presence":
-
-                if (
-                    this.settings.welcome &&
-                    msg.status === "join"
-                ) {
-
-                    this.send(
-                        `👋 Welcome ${msg.username}!`
-                    );
-                }
-
-            break;
-
-            // ================= ROOM MESSAGE =================
-            case "room_msg":
-
-                let m = msg.message;
-
-                if (!m || !m.body)
-                    return;
-
-                let text =
-                    m.body
-                    .toLowerCase()
-                    .trim();
-
-                let sender =
-                    m.sender;
-
-                // ================= MASTER =================
-                let isMaster =
-                    this.masters.includes(
-                        sender
-                    );
-
-                let isMainMaster =
-                    sender ===
-                    this.mainMaster;
-
-                // ================= SETTINGS =================
-                if (isMaster) {
-
-                    if (text === "+quiz on") {
-
-                        this.settings.quiz = true;
-
-                        this.saveConfig();
-
-                        this.send(
-                            "✅ Quiz ON"
-                        );
-
-                        this.nextQuestion();
-
-                        return;
-                    }
-
-                    if (text === "+quiz off") {
-
-                        this.settings.quiz = false;
-
-                        clearInterval(
-                            this.repeatTimer
-                        );
-
-                        this.currentAnswer = null;
-
-                        this.saveConfig();
-
-                        this.send(
-                            "❌ Quiz OFF"
-                        );
-
-                        return;
-                    }
-
-                    if (text === "+welcome on") {
-
-                        this.settings.welcome = true;
-
-                        this.saveConfig();
-
-                        this.send(
-                            "✅ Welcome ON"
-                        );
-
-                        return;
-                    }
-
-                    if (text === "+welcome off") {
-
-                        this.settings.welcome = false;
-
-                        this.saveConfig();
-
-                        this.send(
-                            "❌ Welcome OFF"
-                        );
-
-                        return;
-                    }
-
-                    if (text === "+cricket on") {
-
-                        this.settings.cricket = true;
-
-                        this.saveConfig();
-
-                        this.send(
-                            "🏏 Cricket ON"
-                        );
-
-                        return;
-                    }
-
-                    if (text === "+cricket off") {
-
-                        this.settings.cricket = false;
-
-                        this.saveConfig();
-
-                        this.send(
-                            "🏏 Cricket OFF"
-                        );
-
-                        return;
-                    }
-                }
-
-                // ================= MAIN MASTER =================
-                if (
-                    isMainMaster &&
-                    text.startsWith(
-                        "+addmaster "
-                    )
-                ) {
-
-                    let user =
-                        text.replace(
-                            "+addmaster ",
-                            ""
-                        ).trim();
-
-                    if (
-                        !this.masters.includes(user)
-                    ) {
-
-                        this.masters.push(user);
-
-                        this.saveConfig();
-
-                        this.send(
-`✅ ${user}
-added as master`
-                        );
-                    }
-
                     return;
                 }
 
-                // ================= REMOVE MASTER =================
-                if (
-                    isMaster &&
-                    text.startsWith(
-                        "+removemaster "
-                    )
-                ) {
+                // QUIZ OFF
+                if (text === "+quiz off") {
 
-                    let user =
-                        text.replace(
-                            "+removemaster ",
-                            ""
-                        ).trim();
-
-                    if (
-                        user ===
-                        this.mainMaster
-                    ) {
-
-                        this.send(
-                            "❌ Cannot remove main master"
-                        );
-
-                        return;
-                    }
-
-                    this.masters =
-                        this.masters.filter(
-                            x => x !== user
-                        );
-
-                    this.saveConfig();
-
-                    this.send(
-                        `🗑 ${user} removed`
-                    );
-
-                    return;
-                }
-
-                // ================= MASTERS =================
-                if (text === "+masters") {
-
-                    this.send(
-`👑 Masters
-
-${this.masters.join("\n")}`
-                    );
-
-                    return;
-                }
-
-                // ================= CRICKET =================
-                if (
-                    this.settings.cricket &&
-                    text === "+bat"
-                ) {
-
-                    let results = [
-                        0,1,2,4,6,"W"
-                    ];
-
-                    let result =
-                        results[
-                            Math.floor(
-                                Math.random() *
-                                results.length
-                            )
-                        ];
-
-                    if (result === "W") {
-
-                        this.cricket.wickets++;
-
-                        this.send(
-`❌ OUT
-
-${this.cricket.runs}/${this.cricket.wickets}`
-                        );
-
-                    } else {
-
-                        this.cricket.runs += result;
-
-                        this.send(
-`🏏 ${sender}
-scored ${result}
-
-${this.cricket.runs}/${this.cricket.wickets}`
-                        );
-                    }
-
-                    this.saveConfig();
-
-                    return;
-                }
-
-                if (
-                    this.settings.cricket &&
-                    text === "+score"
-                ) {
-
-                    this.send(
-`🏏 Cricket Score
-
-Runs:
-${this.cricket.runs}
-
-Wickets:
-${this.cricket.wickets}`
-                    );
-
-                    return;
-                }
-
-                // ================= QUIZ ANSWER =================
-                if (
-                    this.currentAnswer !== null &&
-                    text === this.currentAnswer
-                ) {
+                    this.settings.quiz = false;
 
                     clearInterval(
                         this.repeatTimer
@@ -564,31 +396,398 @@ ${this.cricket.wickets}`
 
                     this.currentAnswer = null;
 
-                    if (
-                        !this.userScores[sender]
-                    ) {
-
-                        this.userScores[sender] = 0;
-                    }
-
-                    this.userScores[sender] += 10;
+                    this.saveConfig();
 
                     this.send(
-`🏆 ${sender} correct!
-
-+10 points`
+                        "❌ Quiz OFF"
                     );
 
-                    setTimeout(() => {
-
-                        this.nextQuestion();
-
-                    }, 5000);
+                    return;
                 }
 
-            break;
-        }
+                // WELCOME ON
+                if (text === "+welcome on") {
+
+                    this.settings.welcome = true;
+
+                    this.saveConfig();
+
+                    this.send(
+                        "✅ Welcome ON"
+                    );
+
+                    return;
+                }
+
+                // WELCOME OFF
+                if (text === "+welcome off") {
+
+                    this.settings.welcome = false;
+
+                    this.saveConfig();
+
+                    this.send(
+                        "❌ Welcome OFF"
+                    );
+
+                    return;
+                }
+
+                // CRICKET ON
+                if (text === "+cricket on") {
+
+                    this.settings.cricket = true;
+
+                    this.saveConfig();
+
+                    this.send(
+                        "🏏 Cricket ON"
+                    );
+
+                    return;
+                }
+
+                // CRICKET OFF
+                if (text === "+cricket off") {
+
+                    this.settings.cricket = false;
+
+                    this.saveConfig();
+
+                    this.send(
+                        "🏏 Cricket OFF"
+                    );
+
+                    return;
+                }
+
+                // RESET CRICKET
+                if (
+                    text === "+resetcricket"
+                ) {
+
+                    this.cricket = {
+
+                        runs: 0,
+                        wickets: 0,
+                        overs: 0
+                    };
+
+                    this.saveConfig();
+
+                    this.send(
+                        "🏏 Cricket Reset"
+                    );
+
+                    return;
+                }
+            }
+
+            // ================= ADD MASTER =================
+            if (
+                isMainMaster &&
+                text.startsWith(
+                    "+addmaster "
+                )
+            ) {
+
+                let user =
+                    text.replace(
+                        "+addmaster ",
+                        ""
+                    ).trim();
+
+                if (!user)
+                    return;
+
+                if (
+                    this.masters.includes(user)
+                ) {
+
+                    this.send(
+                        "Already master"
+                    );
+
+                    return;
+                }
+
+                this.masters.push(user);
+
+                this.saveConfig();
+
+                this.send(
+`✅ ${user}
+added as master`
+                );
+
+                return;
+            }
+
+            // ================= REMOVE MASTER =================
+            if (
+                isMaster &&
+                text.startsWith(
+                    "+removemaster "
+                )
+            ) {
+
+                let user =
+                    text.replace(
+                        "+removemaster ",
+                        ""
+                    ).trim();
+
+                if (
+                    user ===
+                    this.mainMaster
+                ) {
+
+                    this.send(
+                        "❌ Cannot remove main master"
+                    );
+
+                    return;
+                }
+
+                this.masters =
+                    this.masters.filter(
+                        x => x !== user
+                    );
+
+                this.saveConfig();
+
+                this.send(
+                    `🗑 ${user} removed`
+                );
+
+                return;
+            }
+
+            // ================= MASTER LIST =================
+            if (
+                text === "+masters"
+            ) {
+
+                this.send(
+`👑 Masters
+
+${this.masters.join("\n")}`
+                );
+
+                return;
+            }
+
+            // ================= START CRICKET =================
+            if (
+                isMaster &&
+                text === "+startcricket"
+            ) {
+
+                if (
+                    !this.settings.cricket
+                ) {
+
+                    this.send(
+                        "❌ Cricket is OFF"
+                    );
+
+                    return;
+                }
+
+                this.cricket.players = [];
+
+                this.send(
+`🏏 CRICKET TEAM OPEN
+
+Need 3 players
+
+Use:
++jointeam`
+                );
+
+                return;
+            }
+
+            // ================= JOIN TEAM =================
+            if (
+                text === "+jointeam"
+            ) {
+
+                if (
+                    !this.cricket.players
+                ) {
+
+                    this.cricket.players = [];
+                }
+
+                if (
+                    this.cricket.players.includes(
+                        sender
+                    )
+                ) {
+
+                    this.send(
+                        "Already joined"
+                    );
+
+                    return;
+                }
+
+                if (
+                    this.cricket.players.length >= 3
+                ) {
+
+                    this.send(
+                        "Team already full"
+                    );
+
+                    return;
+                }
+
+                this.cricket.players.push(
+                    sender
+                );
+
+                let remain =
+                    3 -
+                    this.cricket.players.length;
+
+                this.send(
+`🏏 ${sender} joined team
+
+Players:
+${this.cricket.players.join(", ")}
+
+Remaining:
+${remain}`
+                );
+
+                // TEAM COMPLETE
+                if (
+                    this.cricket.players.length === 3
+                ) {
+
+                    this.send(
+`✅ TEAM COMPLETE
+
+Players:
+${this.cricket.players.join(", ")}`
+                    );
+                }
+
+                this.saveConfig();
+
+                return;
+            }
+
+            // ================= BAT =================
+            if (
+                this.settings.cricket &&
+                text === "+bat"
+            ) {
+
+                let results = [
+                    0,1,2,3,4,6,"W"
+                ];
+
+                let result =
+                    results[
+                        Math.floor(
+                            Math.random() *
+                            results.length
+                        )
+                    ];
+
+                if (
+                    result === "W"
+                ) {
+
+                    this.cricket.wickets++;
+
+                    this.send(
+`❌ OUT
+
+Score:
+${this.cricket.runs}/${this.cricket.wickets}`
+                    );
+
+                } else {
+
+                    this.cricket.runs += result;
+
+                    this.send(
+`🏏 ${sender} scored ${result}
+
+Score:
+${this.cricket.runs}/${this.cricket.wickets}`
+                    );
+                }
+
+                this.saveConfig();
+
+                return;
+            }
+
+            // ================= SCORE =================
+            if (
+                this.settings.cricket &&
+                text === "+score"
+            ) {
+
+                this.send(
+`🏏 SCOREBOARD
+
+Runs:
+${this.cricket.runs}
+
+Wickets:
+${this.cricket.wickets}`
+                );
+
+                return;
+            }
+
+            // ================= QUIZ ANSWER =================
+            if (
+                this.currentAnswer !== null &&
+                text === this.currentAnswer
+            ) {
+
+                clearInterval(
+                    this.repeatTimer
+                );
+
+                this.currentAnswer = null;
+
+                if (
+                    !this.userScores[sender]
+                ) {
+
+                    this.userScores[sender] = 0;
+                }
+
+                this.userScores[sender] += 10;
+
+                this.send(
+`🏆 ${sender} correct!
+
++10 points
+
+Total:
+${this.userScores[sender]}`
+                );
+
+                setTimeout(() => {
+
+                    this.nextQuestion();
+
+                }, 5000);
+            }
+
+        break;
     }
+}
+
 }
 
 module.exports = ChildBot;
