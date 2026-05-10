@@ -13,6 +13,7 @@ let MAIN_PASSWORD = "";
 
 let mainWS = null;
 let loggedIn = false;
+
 let loginResponse = null;
 
 const activeBots = [];
@@ -25,7 +26,7 @@ for (let bot of db.bots || []) {
     activeBots.push(new ChildBot(bot));
 }
 
-// ================= HTML =================
+// ================= UI =================
 app.get("/", (req, res) => {
     res.send(`
 <!DOCTYPE html>
@@ -52,6 +53,7 @@ input{
     width:100%;
     padding:10px;
     margin-top:10px;
+    box-sizing:border-box;
 }
 
 button{
@@ -61,11 +63,10 @@ button{
     background:#2196f3;
     color:white;
     border:none;
-    cursor:pointer;
 }
 
 #status{
-    margin-top:15px;
+    margin-top:10px;
     font-weight:bold;
 }
 
@@ -73,10 +74,11 @@ button{
     margin-top:15px;
     background:black;
     color:#00ff00;
-    height:200px;
+    height:250px;
     overflow:auto;
-    font-size:12px;
     padding:10px;
+    font-size:12px;
+    white-space:pre-wrap;
 }
 </style>
 </head>
@@ -98,7 +100,9 @@ button{
 <script>
 
 function log(t){
-    document.getElementById("debug").innerText += t + "\\n";
+    let d = document.getElementById("debug");
+    d.innerText += t + "\\n";
+    d.scrollTop = d.scrollHeight;
 }
 
 async function login(){
@@ -108,6 +112,8 @@ async function login(){
 
     document.getElementById("status").innerText = "Connecting...";
 
+    log("➡ Sending login request");
+
     let res = await fetch("/login", {
         method:"POST",
         headers:{ "Content-Type":"application/json" },
@@ -116,11 +122,14 @@ async function login(){
 
     let data = await res.json();
 
+    log("📦 RESPONSE:");
     log(JSON.stringify(data, null, 2));
+
     document.getElementById("status").innerText = data.message;
 }
 
 </script>
+
 </body>
 </html>
 `);
@@ -146,57 +155,64 @@ app.post("/login", (req, res) => {
 function connectMainBot(res) {
 
     loginResponse = res;
+    loggedIn = false;
 
     if (mainWS) mainWS.close();
 
-    loggedIn = false;
-
     mainWS = new WebSocket("wss://viberschat.space:8443/server");
 
+    // ================= OPEN =================
     mainWS.on("open", () => {
 
-        console.log("WS connected");
+        console.log("🔌 WebSocket Connected");
 
-        mainWS.send(JSON.stringify({
+        const loginPayload = {
             handler: "3rd_login",
             payload: {
                 username: MAIN_USERNAME,
                 password: MAIN_PASSWORD,
                 api_key: "xYn86hjOpJk$"
             }
-        }));
+        };
+
+        console.log("➡ Sending login:", loginPayload);
+
+        mainWS.send(JSON.stringify(loginPayload));
     });
 
-   
+    // ================= MESSAGE (ONLY ONCE - FIXED) =================
+    mainWS.on("message", (raw) => {
 
-        console.log("SERVER:", msg);
-mainWS.on("message", (data) => {
+        const text = raw.toString();
+        console.log("📩 RAW:", text);
 
-    // 🔥 ALWAYS SHOW RAW DATA FIRST
-    console.log("📩 RAW FROM SERVER:");
-    console.log(data.toString());
+        if (loginResponse) {
+            loginResponse.write?.("RAW: " + text + "\n");
+        }
 
-    if (loginResponse) {
-        loginResponse.write("RAW: " + data.toString() + "\n");
-    }
+        let msg;
+        try {
+            msg = JSON.parse(text);
+        } catch (e) {
+            console.log("❌ JSON ERROR");
+            return;
+        }
 
-    let msg;
-    try {
-        msg = JSON.parse(data);
-    } catch (e) {
-        console.log("❌ JSON PARSE FAILED");
-        return;
-    }
+        console.log("📦 PARSED:", msg);
 
-    console.log("📦 PARSED:", msg);
-        // ================= LOGIN RESPONSE =================
+        // ================= LOGIN CHECK (MORE RELIABLE) =================
         if (msg.handler === "3rd_login") {
 
-            if (msg.status === "success") {
+            const ok =
+                msg.status === "success" ||
+                msg.success === true ||
+                msg.message?.toLowerCase?.().includes("success");
+
+            if (ok) {
 
                 loggedIn = true;
 
-                console.log("LOGIN OK");
+                console.log("✅ LOGIN SUCCESS");
 
                 if (loginResponse) {
                     loginResponse.json({
@@ -208,12 +224,12 @@ mainWS.on("message", (data) => {
 
             } else {
 
-                console.log("LOGIN FAILED");
+                console.log("❌ LOGIN FAILED");
 
                 if (loginResponse) {
                     loginResponse.json({
                         success: false,
-                        message: "❌ Invalid credentials"
+                        message: "❌ Login failed (check credentials)"
                     });
                     loginResponse = null;
                 }
@@ -224,26 +240,24 @@ mainWS.on("message", (data) => {
 
         if (!loggedIn) return;
 
-        // ================= ONLY PM =================
-        if (msg.handler !== "pvt_chat") return;
+        // ================= PRIVATE MESSAGE =================
+        if (msg.handler !== "private_msg") return;
 
-        let sender = msg.message?.sender || "";
-        let body = (msg.message?.body || "").trim();
+        let sender = msg.sender || msg.message?.sender || "";
+        let body = (msg.body || msg.message?.body || "").trim();
 
-        console.log("PM:", sender, body);
+        console.log("💬 PM:", sender, body);
 
         // ================= HELP =================
         if (body.toLowerCase() === "help") {
 
-            sendPM(sender, `
-🤖 FUNBOT GUIDE
+            sendPM(sender, `🤖 FUNBOT GUIDE
 
 Create bot:
-j/room#botname#password
+j/room#bot#pass
 
 Example:
-j/funroom#bot1#123456
-`);
+j/funroom#bot1#123456`);
 
             return;
         }
@@ -283,11 +297,18 @@ j/funroom#bot1#123456
 
             activeBots.push(new ChildBot(config));
 
-            sendPM(sender, `✅ Bot created: ${username} in ${room}`);
+            sendPM(sender, `✅ Bot created: ${username}`);
         }
     });
 
-    mainWS.on("error", (e) => console.log("WS ERROR:", e.message));
+    mainWS.on("error", (e) => {
+        console.log("WS ERROR:", e.message);
+    });
+
+    mainWS.on("close", () => {
+        console.log("🔌 WebSocket Closed");
+        loggedIn = false;
+    });
 }
 
 // ================= SEND PM =================
@@ -303,9 +324,9 @@ function sendPM(user, text) {
     }));
 }
 
-// ================= START SERVER =================
+// ================= START =================
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
-    console.log("FUNBOT RUNNING ON", PORT);
+    console.log("🚀 FUNBOT RUNNING ON", PORT);
 });
