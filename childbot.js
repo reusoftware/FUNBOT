@@ -1,5 +1,4 @@
 const WebSocket = require("ws");
-
 const { generateQuestion } = require("./quiz");
 
 const {
