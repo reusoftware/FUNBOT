@@ -443,9 +443,18 @@ Rules:
                     username: username,
                     password: password,
                     mainMaster: sender,
-                    masters: [sender],
-                    welcome: true,
-                    quiz: true
+                    masters: [sender]
+                   settings: {
+    welcome: true,
+    quiz: true,
+    cricket: false
+},
+
+cricket: {
+    runs: 0,
+    wickets: 0,
+    overs: 0
+}
                 };
 
                 db.bots.push(config);
