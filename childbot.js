@@ -1,40 +1,52 @@
 const WebSocket = require("ws");
 
-const { generateQuestion } = require("./quiz");
-const { loadBots, saveBots } = require("./storage");
+const { generateQuestion } =
+    require("./quiz");
+
+const {
+    loadBots,
+    saveBots
+} = require("./storage");
 
 class ChildBot {
 
-    constructor(config) {
+    constructor(config, owner) {
+
+        this.owner = owner;
 
         this.room = config.room;
         this.username = config.username;
         this.password = config.password;
 
-        // ================= MASTER =================
-        this.mainMaster = config.mainMaster;
+        this.mainMaster =
+            config.mainMaster;
 
         this.masters =
-            config.masters || [config.mainMaster];
+            config.masters || [
+                config.mainMaster
+            ];
 
-        // ================= SETTINGS =================
-        this.settings = config.settings || {
-            welcome: true,
-            quiz: true,
-            cricket: false
-        };
+        this.settings =
+            config.settings || {
 
-        // ================= CRICKET =================
-        this.cricket = config.cricket || {
-            runs: 0,
-            wickets: 0,
-            overs: 0
-        };
+                welcome: true,
+                quiz: true,
+                cricket: false
+            };
 
-        // ================= QUIZ =================
+        this.cricket =
+            config.cricket || {
+
+                runs: 0,
+                wickets: 0,
+                overs: 0
+            };
+
         this.currentAnswer = null;
-        this.repeatCount = 0;
+
         this.repeatTimer = null;
+
+        this.repeatCount = 0;
 
         this.userScores = {};
 
@@ -46,32 +58,36 @@ class ChildBot {
 
         let db = loadBots();
 
+        let ownerData =
+            db.mainbots[this.owner];
+
+        if (!ownerData) return;
+
         let index =
-            db.bots.findIndex(
-                x => x.room === this.room
+            ownerData.childbots.findIndex(
+                x => x.username === this.username
             );
 
         if (index === -1) return;
 
-        db.bots[index].masters =
-            this.masters;
+        ownerData.childbots[index] = {
 
-        db.bots[index].settings =
-            this.settings;
+            room: this.room,
 
-        db.bots[index].cricket =
-            this.cricket;
+            username: this.username,
+
+            password: this.password,
+
+            mainMaster: this.mainMaster,
+
+            masters: this.masters,
+
+            settings: this.settings,
+
+            cricket: this.cricket
+        };
 
         saveBots(db);
-    }
-
-    // ================= MASTER CHECK =================
-    isMaster(user) {
-        return this.masters.includes(user);
-    }
-
-    isMainMaster(user) {
-        return user === this.mainMaster;
     }
 
     // ================= CONNECT =================
@@ -88,10 +104,15 @@ class ChildBot {
             );
 
             this.ws.send(JSON.stringify({
+
                 handler: "3rd_login",
+
                 payload: {
+
                     username: this.username,
+
                     password: this.password,
+
                     api_key: "xYn86hjOpJk$"
                 }
             }));
@@ -122,9 +143,10 @@ class ChildBot {
             clearInterval(this.repeatTimer);
 
             setTimeout(() => {
-                this.connect();
-            }, 5000);
 
+                this.connect();
+
+            }, 5000);
         });
     }
 
@@ -133,10 +155,19 @@ class ChildBot {
 
         if (!this.ws) return;
 
+        if (
+            this.ws.readyState !==
+            WebSocket.OPEN
+        ) return;
+
         this.ws.send(JSON.stringify({
+
             handler: "room_msg",
+
             payload: {
+
                 room_name: this.room,
+
                 body: text
             }
         }));
@@ -146,8 +177,11 @@ class ChildBot {
     joinRoom() {
 
         this.ws.send(JSON.stringify({
+
             handler: "join_room",
+
             payload: {
+
                 room_name: this.room
             }
         }));
@@ -156,7 +190,8 @@ class ChildBot {
     // ================= QUIZ =================
     nextQuestion() {
 
-        if (!this.settings.quiz) return;
+        if (!this.settings.quiz)
+            return;
 
         clearInterval(this.repeatTimer);
 
@@ -164,39 +199,56 @@ class ChildBot {
 
         let q = generateQuestion();
 
-        this.currentAnswer = q.answer;
+        this.currentAnswer =
+            q.answer.toLowerCase();
 
         this.send(q.question);
 
-        this.repeatTimer = setInterval(() => {
+        this.repeatTimer =
+            setInterval(() => {
 
-            this.repeatCount++;
+                this.repeatCount++;
 
-            if (this.currentAnswer === null) {
+                if (
+                    this.currentAnswer === null
+                ) {
 
-                clearInterval(this.repeatTimer);
+                    clearInterval(
+                        this.repeatTimer
+                    );
 
-                return;
-            }
-
-            this.send(`⏳ ${q.question}`);
-
-            if (this.repeatCount >= 5) {
-
-                clearInterval(this.repeatTimer);
+                    return;
+                }
 
                 this.send(
-                    `❌ Time up! Answer: ${this.currentAnswer}`
+                    `⏳ ${q.question}`
                 );
 
-                this.currentAnswer = null;
+                if (
+                    this.repeatCount >= 5
+                ) {
 
-                setTimeout(() => {
-                    this.nextQuestion();
-                }, 5000);
-            }
+                    clearInterval(
+                        this.repeatTimer
+                    );
 
-        }, 15000);
+                    this.send(
+`❌ Time up!
+
+Answer:
+${this.currentAnswer}`
+                    );
+
+                    this.currentAnswer = null;
+
+                    setTimeout(() => {
+
+                        this.nextQuestion();
+
+                    }, 5000);
+                }
+
+            }, 15000);
     }
 
     // ================= HANDLE =================
@@ -211,7 +263,10 @@ class ChildBot {
 
                 setTimeout(() => {
 
-                    if (this.settings.quiz) {
+                    if (
+                        this.settings.quiz &&
+                        this.currentAnswer === null
+                    ) {
 
                         this.nextQuestion();
                     }
@@ -225,7 +280,7 @@ class ChildBot {
 
                 if (
                     this.settings.welcome &&
-                    msg.status === "update"
+                    msg.status === "join"
                 ) {
 
                     this.send(
@@ -240,27 +295,39 @@ class ChildBot {
 
                 let m = msg.message;
 
-                if (!m || !m.body) return;
+                if (!m || !m.body)
+                    return;
 
                 let text =
-                    m.body.toLowerCase().trim();
+                    m.body
+                    .toLowerCase()
+                    .trim();
 
-                let sender = m.sender;
+                let sender =
+                    m.sender;
 
-                // =====================================
-                // SETTINGS COMMANDS
-                // =====================================
+                // ================= MASTER =================
+                let isMaster =
+                    this.masters.includes(
+                        sender
+                    );
 
-                if (this.isMaster(sender)) {
+                let isMainMaster =
+                    sender ===
+                    this.mainMaster;
 
-                    // ================= QUIZ =================
+                // ================= SETTINGS =================
+                if (isMaster) {
+
                     if (text === "+quiz on") {
 
                         this.settings.quiz = true;
 
                         this.saveConfig();
 
-                        this.send("✅ Quiz ON");
+                        this.send(
+                            "✅ Quiz ON"
+                        );
 
                         this.nextQuestion();
 
@@ -271,25 +338,30 @@ class ChildBot {
 
                         this.settings.quiz = false;
 
-                        clearInterval(this.repeatTimer);
+                        clearInterval(
+                            this.repeatTimer
+                        );
 
                         this.currentAnswer = null;
 
                         this.saveConfig();
 
-                        this.send("❌ Quiz OFF");
+                        this.send(
+                            "❌ Quiz OFF"
+                        );
 
                         return;
                     }
 
-                    // ================= WELCOME =================
                     if (text === "+welcome on") {
 
                         this.settings.welcome = true;
 
                         this.saveConfig();
 
-                        this.send("✅ Welcome ON");
+                        this.send(
+                            "✅ Welcome ON"
+                        );
 
                         return;
                     }
@@ -300,19 +372,22 @@ class ChildBot {
 
                         this.saveConfig();
 
-                        this.send("❌ Welcome OFF");
+                        this.send(
+                            "❌ Welcome OFF"
+                        );
 
                         return;
                     }
 
-                    // ================= CRICKET =================
                     if (text === "+cricket on") {
 
                         this.settings.cricket = true;
 
                         this.saveConfig();
 
-                        this.send("🏏 Cricket ON");
+                        this.send(
+                            "🏏 Cricket ON"
+                        );
 
                         return;
                     }
@@ -323,78 +398,51 @@ class ChildBot {
 
                         this.saveConfig();
 
-                        this.send("🏏 Cricket OFF");
-
-                        return;
-                    }
-
-                    // ================= RESET CRICKET =================
-                    if (text === "+resetcricket") {
-
-                        this.cricket = {
-                            runs: 0,
-                            wickets: 0,
-                            overs: 0
-                        };
-
-                        this.saveConfig();
-
                         this.send(
-                            "🏏 Cricket reset"
+                            "🏏 Cricket OFF"
                         );
 
                         return;
                     }
                 }
 
-                // =====================================
-                // MAIN MASTER ONLY
-                // =====================================
+                // ================= MAIN MASTER =================
+                if (
+                    isMainMaster &&
+                    text.startsWith(
+                        "+addmaster "
+                    )
+                ) {
 
-                if (this.isMainMaster(sender)) {
+                    let user =
+                        text.replace(
+                            "+addmaster ",
+                            ""
+                        ).trim();
 
                     if (
-                        text.startsWith("+addmaster ")
+                        !this.masters.includes(user)
                     ) {
-
-                        let user =
-                            text.replace(
-                                "+addmaster ",
-                                ""
-                            ).trim();
-
-                        if (!user) return;
-
-                        if (
-                            this.masters.includes(user)
-                        ) {
-
-                            this.send(
-                                "Already master"
-                            );
-
-                            return;
-                        }
 
                         this.masters.push(user);
 
                         this.saveConfig();
 
                         this.send(
-                            `✅ ${user} added as master`
+`✅ ${user}
+added as master`
                         );
-
-                        return;
                     }
+
+                    return;
                 }
 
-                // =====================================
-                // REMOVE MASTER
-                // =====================================
-
+                // ================= REMOVE MASTER =================
                 if (
-                    this.isMaster(sender) &&
-                    text.startsWith("+removemaster ")
+                    isMaster &&
+                    text.startsWith(
+                        "+removemaster "
+                    )
                 ) {
 
                     let user =
@@ -404,7 +452,8 @@ class ChildBot {
                         ).trim();
 
                     if (
-                        user === this.mainMaster
+                        user ===
+                        this.mainMaster
                     ) {
 
                         this.send(
@@ -428,31 +477,27 @@ class ChildBot {
                     return;
                 }
 
-                // =====================================
-                // MASTER LIST
-                // =====================================
-
+                // ================= MASTERS =================
                 if (text === "+masters") {
 
                     this.send(
-                        "👑 Masters\n\n" +
-                        this.masters.join("\n")
+`👑 Masters
+
+${this.masters.join("\n")}`
                     );
 
                     return;
                 }
 
-                // =====================================
-                // CRICKET GAME
-                // =====================================
-
+                // ================= CRICKET =================
                 if (
                     this.settings.cricket &&
                     text === "+bat"
                 ) {
 
-                    let results =
-                        [0,1,2,4,6,"W"];
+                    let results = [
+                        0,1,2,4,6,"W"
+                    ];
 
                     let result =
                         results[
@@ -469,7 +514,6 @@ class ChildBot {
                         this.send(
 `❌ OUT
 
-Score:
 ${this.cricket.runs}/${this.cricket.wickets}`
                         );
 
@@ -478,9 +522,9 @@ ${this.cricket.runs}/${this.cricket.wickets}`
                         this.cricket.runs += result;
 
                         this.send(
-`🏏 ${sender} scored ${result}
+`🏏 ${sender}
+scored ${result}
 
-Score:
 ${this.cricket.runs}/${this.cricket.wickets}`
                         );
                     }
@@ -498,52 +542,48 @@ ${this.cricket.runs}/${this.cricket.wickets}`
                     this.send(
 `🏏 Cricket Score
 
-Runs: ${this.cricket.runs}
-Wickets: ${this.cricket.wickets}`
+Runs:
+${this.cricket.runs}
+
+Wickets:
+${this.cricket.wickets}`
                     );
 
                     return;
                 }
 
-                // =====================================
-                // QUIZ ANSWER
-                // =====================================
-
+                // ================= QUIZ ANSWER =================
                 if (
-                    this.currentAnswer !== null
+                    this.currentAnswer !== null &&
+                    text === this.currentAnswer
                 ) {
 
+                    clearInterval(
+                        this.repeatTimer
+                    );
+
+                    this.currentAnswer = null;
+
                     if (
-                        text ===
-                        this.currentAnswer
-                            .toLowerCase()
+                        !this.userScores[sender]
                     ) {
 
-                        clearInterval(
-                            this.repeatTimer
-                        );
+                        this.userScores[sender] = 0;
+                    }
 
-                        this.currentAnswer = null;
+                    this.userScores[sender] += 10;
 
-                        if (
-                            !this.userScores[sender]
-                        ) {
-
-                            this.userScores[sender] = 0;
-                        }
-
-                        this.userScores[sender] += 10;
-
-                        this.send(
+                    this.send(
 `🏆 ${sender} correct!
 
 +10 points`
-                        );
+                    );
 
-                        setTimeout(() => {
-                            this.nextQuestion();
-                        }, 5000);
-                    }
+                    setTimeout(() => {
+
+                        this.nextQuestion();
+
+                    }, 5000);
                 }
 
             break;
