@@ -232,7 +232,7 @@ function connectMainBot(res) {
         if (!loggedIn) return;
 
         // ================= PRIVATE MESSAGE =================
-        if (msg.handler !== "private_msg") return;
+        if (msg.handler !== "pvt_chat") return;
 
         let sender = msg.sender || msg.message?.sender || "";
         let body = (msg.body || msg.message?.body || "").trim();
@@ -295,7 +295,7 @@ function sendPM(user, text) {
     if (!mainWS) return;
 
     mainWS.send(JSON.stringify({
-        handler: "private_msg",
+        handler: "pvt_chat",
         payload: {
             username: user,
             body: text
