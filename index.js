@@ -47,7 +47,7 @@ body{
     background:white;
     padding:20px;
     border-radius:10px;
-    max-width:400px;
+    max-width:500px;
     margin:auto;
 }
 
@@ -55,6 +55,7 @@ input{
     width:100%;
     padding:10px;
     margin-top:10px;
+    box-sizing:border-box;
 }
 
 button{
@@ -70,6 +71,18 @@ button{
 #status{
     margin-top:15px;
     font-weight:bold;
+}
+
+#debug{
+    margin-top:20px;
+    background:black;
+    color:#00ff00;
+    height:250px;
+    overflow:auto;
+    padding:10px;
+    font-family:Consolas;
+    font-size:12px;
+    white-space:pre-wrap;
 }
 </style>
 </head>
@@ -87,9 +100,20 @@ button{
 
 <div id="status"></div>
 
+<div id="debug"></div>
+
 </div>
 
 <script>
+
+function log(t){
+
+    let d = document.getElementById("debug");
+
+    d.innerHTML += t + "\\n";
+
+    d.scrollTop = d.scrollHeight;
+}
 
 async function login(){
 
@@ -97,6 +121,9 @@ async function login(){
     let pass = document.getElementById("pass").value;
 
     document.getElementById("status").innerHTML = "Connecting...";
+
+    log("Sending login request...");
+    log("Username: " + user);
 
     try{
 
@@ -111,14 +138,30 @@ async function login(){
             })
         });
 
-        let data = await res.json();
+        let txt = await res.text();
+
+        log("RAW SERVER RESPONSE:");
+        log(txt);
+
+        let data;
+
+        try{
+            data = JSON.parse(txt);
+        }catch(e){
+
+            log("JSON PARSE ERROR");
+            document.getElementById("status").innerHTML = "Invalid server response";
+            return;
+        }
 
         document.getElementById("status").innerHTML = data.message;
 
     }catch(err){
 
-        document.getElementById("status").innerHTML = "Server error";
+        log("ERROR:");
+        log(err.toString());
 
+        document.getElementById("status").innerHTML = "Server error";
     }
 }
 </script>
