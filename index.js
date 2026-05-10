@@ -13,49 +13,115 @@ let MAIN_PASSWORD = "";
 
 let mainWS = null;
 let loggedIn = false;
-
 let loginResponse = null;
+
 let debugLogs = [];
 
 const activeBots = [];
 
-// ================= LOAD BOTS =================
+// ================= LOAD DATABASE =================
 const db = loadBots();
 
-for (let bot of db.bots || []) {
+if (!db.bots) db.bots = [];
+
+// ================= LOAD SAVED BOTS =================
+for (let bot of db.bots) {
+
     console.log("Loading childbot:", bot.username);
-    activeBots.push(new ChildBot(bot));
+
+    try {
+
+        let child = new ChildBot(bot);
+
+        // store config reference
+        child.config = bot;
+
+        activeBots.push(child);
+
+    } catch (err) {
+
+        console.log("Failed loading childbot:", err.message);
+
+    }
 }
 
-// ================= DEBUG HELPER =================
+// ================= DEBUG =================
 function debug(msg) {
+
     console.log(msg);
+
     debugLogs.push(msg);
 
-    if (debugLogs.length > 50) debugLogs.shift();
+    if (debugLogs.length > 100) {
+        debugLogs.shift();
+    }
 }
 
 // ================= FRONTEND =================
 app.get("/", (req, res) => {
+
     res.send(`
 <!DOCTYPE html>
 <html>
 <head>
+
 <title>FUNBOT LOGIN</title>
 
 <style>
-body{font-family:Arial;background:#f5f5f5;padding:30px}
-.box{background:white;padding:20px;border-radius:10px;max-width:500px;margin:auto}
-input{width:100%;padding:10px;margin-top:10px}
-button{margin-top:10px;padding:10px;width:100%;background:#2196f3;color:white;border:none}
-#status{margin-top:10px;font-weight:bold}
-#debug{margin-top:15px;background:black;color:#00ff00;height:250px;overflow:auto;padding:10px;font-size:12px}
+
+body{
+    font-family:Arial;
+    background:#f5f5f5;
+    padding:30px;
+}
+
+.box{
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    max-width:500px;
+    margin:auto;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    border:none;
+    background:#2196f3;
+    color:white;
+    cursor:pointer;
+}
+
+#status{
+    margin-top:10px;
+    font-weight:bold;
+}
+
+#debug{
+    margin-top:15px;
+    background:black;
+    color:#00ff00;
+    height:300px;
+    overflow:auto;
+    padding:10px;
+    font-size:12px;
+}
+
 </style>
+
 </head>
 
 <body>
 
 <div class="box">
+
 <h2>🤖 FUNBOT LOGIN</h2>
 
 <input id="user" placeholder="Username">
@@ -64,7 +130,9 @@ button{margin-top:10px;padding:10px;width:100%;background:#2196f3;color:white;bo
 <button onclick="login()">LOGIN</button>
 
 <div id="status"></div>
+
 <pre id="debug"></pre>
+
 </div>
 
 <script>
@@ -78,8 +146,13 @@ async function login(){
 
     let res = await fetch("/login", {
         method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ username:user, password:pass })
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify({
+            username:user,
+            password:pass
+        })
     });
 
     let data = await res.json();
@@ -88,12 +161,14 @@ async function login(){
     document.getElementById("debug").innerText = data.debug.join("\\n");
 }
 
-// auto refresh debug
-setInterval(async () => {
+setInterval(async()=>{
+
     let res = await fetch("/debug");
     let data = await res.json();
+
     document.getElementById("debug").innerText = data.logs.join("\\n");
-}, 2000);
+
+},2000);
 
 </script>
 
@@ -104,7 +179,11 @@ setInterval(async () => {
 
 // ================= DEBUG API =================
 app.get("/debug", (req, res) => {
-    res.json({ logs: debugLogs });
+
+    res.json({
+        logs: debugLogs
+    });
+
 });
 
 // ================= LOGIN API =================
@@ -116,6 +195,7 @@ app.post("/login", (req, res) => {
     debug("➡ Login request received");
 
     if (!MAIN_USERNAME || !MAIN_PASSWORD) {
+
         return res.json({
             success: false,
             message: "Missing credentials",
@@ -124,16 +204,21 @@ app.post("/login", (req, res) => {
     }
 
     connectMainBot(res);
+
 });
 
-// ================= CONNECT BOT =================
+// ================= CONNECT MAIN BOT =================
 function connectMainBot(res) {
 
     loginResponse = res;
     loggedIn = false;
 
     if (mainWS) {
-        try { mainWS.close(); } catch {}
+
+        try {
+            mainWS.close();
+        } catch {}
+
     }
 
     debug("🔌 Connecting WebSocket...");
@@ -141,7 +226,9 @@ function connectMainBot(res) {
     mainWS = new WebSocket("wss://viberschat.space:8443/server");
 
     let timeout = setTimeout(() => {
+
         if (!loggedIn && loginResponse) {
+
             debug("⛔ LOGIN TIMEOUT");
 
             loginResponse.json({
@@ -152,8 +239,10 @@ function connectMainBot(res) {
 
             loginResponse = null;
         }
+
     }, 10000);
 
+    // ================= OPEN =================
     mainWS.on("open", () => {
 
         debug("✅ WS CONNECTED");
@@ -171,44 +260,54 @@ function connectMainBot(res) {
         debug(JSON.stringify(payload));
 
         mainWS.send(JSON.stringify(payload));
+
     });
 
-    mainWS.on("message", (raw) => {
+    // ================= MESSAGE =================
+    mainWS.on("message", async(raw) => {
 
         let text = raw.toString();
+
         debug("📩 RAW: " + text);
 
         let msg;
+
         try {
+
             msg = JSON.parse(text);
+
         } catch {
+
             debug("❌ JSON PARSE FAIL");
+
             return;
         }
 
         debug("📦 PARSED: " + JSON.stringify(msg));
 
-        // ================= LOGIN CHECK (FIXED LOGIC) =================
+        // ================= LOGIN RESULT =================
         if (msg.handler === "3rd_login") {
 
             let ok =
                 msg.status === "success" ||
-                msg.success === true ||
-                (msg.message || "").toLowerCase().includes("success");
+                msg.success === true;
 
             if (ok) {
 
                 loggedIn = true;
+
                 clearTimeout(timeout);
 
                 debug("✅ LOGIN SUCCESS");
 
                 if (loginResponse) {
+
                     loginResponse.json({
                         success: true,
                         message: "Login successful",
                         debug: debugLogs
                     });
+
                     loginResponse = null;
                 }
 
@@ -217,11 +316,13 @@ function connectMainBot(res) {
                 debug("❌ LOGIN FAILED");
 
                 if (loginResponse) {
+
                     loginResponse.json({
                         success: false,
                         message: "Login failed",
                         debug: debugLogs
                     });
+
                     loginResponse = null;
                 }
             }
@@ -232,80 +333,213 @@ function connectMainBot(res) {
         if (!loggedIn) return;
 
         // ================= PRIVATE MESSAGE =================
-        if (msg.handler !== "pvt_chat") return;
+        if (msg.handler === "pvt_chat") {
 
-        let sender = msg.sender || msg.message?.sender || "";
-        let body = (msg.body || msg.message?.body || "").trim();
+            // incoming format from server
+            let message = msg.message || {};
 
-        debug("💬 PM: " + sender + " => " + body);
+            let sender =
+                message.from_username ||
+                "";
 
-        if (body.toLowerCase() === "help") {
+            let body =
+                (message.body || "")
+                .trim();
 
-            sendPM(sender, `🤖 FUNBOT GUIDE
+            let messageId =
+                message.id || "";
 
-j/room#bot#pass
+            debug("💬 PM: " + sender + " => " + body);
+
+            // mark seen
+            if (messageId) {
+
+                markSeen(messageId);
+
+            }
+
+            // ignore empty
+            if (!sender || !body) return;
+
+            // ================= HELP =================
+            if (body.toLowerCase() === "help") {
+
+                sendPM(sender,
+`🤖 FUNBOT GUIDE
+
+Request Bot:
+j/roomname#botid#botpassword
+
 Example:
-j/funroom#bot1#123456`);
-            return;
+j/chatfun#bot1#123456
+
+Rules:
+✔ only 1 bot per room
+✔ bot must be offline
+✔ bot joins automatically`);
+
+                return;
+            }
+
+            // ================= CREATE BOT =================
+            if (body.startsWith("j/")) {
+
+                let p = body.slice(2).split("#");
+
+                if (p.length < 3) {
+
+                    sendPM(sender,
+                        "❌ Invalid format\\nUse:\\nj/room#bot#pass"
+                    );
+
+                    return;
+                }
+
+                let room = p[0].trim();
+                let username = p[1].trim();
+                let password = p[2].trim();
+
+                // check empty
+                if (!room || !username || !password) {
+
+                    sendPM(sender,
+                        "❌ Missing room/bot/password"
+                    );
+
+                    return;
+                }
+
+                // room already taken
+                let roomExists =
+                    db.bots.find(x => x.room === room) ||
+                    activeBots.find(x => x.config?.room === room);
+
+                if (roomExists) {
+
+                    sendPM(sender,
+                        "❌ Only 1 bot allowed per room"
+                    );
+
+                    return;
+                }
+
+                // username already used
+                let botExists =
+                    db.bots.find(x => x.username === username) ||
+                    activeBots.find(x => x.config?.username === username);
+
+                if (botExists) {
+
+                    sendPM(sender,
+                        "❌ Bot already online/exist"
+                    );
+
+                    return;
+                }
+
+                // create config
+                let config = {
+                    room: room,
+                    username: username,
+                    password: password,
+                    mainMaster: sender,
+                    masters: [sender],
+                    welcome: true,
+                    quiz: true
+                };
+
+                db.bots.push(config);
+
+                saveBots(db);
+
+                try {
+
+                    let child = new ChildBot(config);
+
+                    child.config = config;
+
+                    activeBots.push(child);
+
+                    sendPM(sender,
+                        "✅ Bot created successfully\\nRoom: " + room
+                    );
+
+                    debug("✅ ChildBot created: " + username);
+
+                } catch (err) {
+
+                    debug("❌ ChildBot error: " + err.message);
+
+                    sendPM(sender,
+                        "❌ Failed creating childbot"
+                    );
+                }
+
+                return;
+            }
         }
 
-        if (body.startsWith("j/")) {
-
-            let p = body.slice(2).split("#");
-            if (p.length < 3) return;
-
-            let room = p[0];
-            let username = p[1];
-            let password = p[2];
-
-            if (db.bots.find(x => x.room === room)) return sendPM(sender, "Room exists");
-            if (db.bots.find(x => x.username === username)) return sendPM(sender, "User exists");
-
-            let config = {
-                room,
-                username,
-                password,
-                mainMaster: sender,
-                masters: [sender],
-                quiz: true,
-                welcome: true
-            };
-
-            db.bots.push(config);
-            saveBots(db);
-
-            activeBots.push(new ChildBot(config));
-
-            sendPM(sender, `Bot created: ${username}`);
-        }
     });
 
-    mainWS.on("error", (e) => {
-        debug("WS ERROR: " + e.message);
+    // ================= ERROR =================
+    mainWS.on("error", (err) => {
+
+        debug("❌ WS ERROR: " + err.message);
+
     });
 
+    // ================= CLOSE =================
     mainWS.on("close", () => {
+
         debug("🔌 WS CLOSED");
+
         loggedIn = false;
+
     });
+
 }
 
 // ================= SEND PM =================
 function sendPM(user, text) {
-    if (!mainWS) return;
 
-    mainWS.send(JSON.stringify({
+    if (!mainWS || !loggedIn) return;
+
+    let payload = {
         handler: "pvt_chat",
         payload: {
-            username: user,
+            to_username: user,
             body: text
         }
-    }));
+    };
+
+    debug("📤 SEND PM: " + JSON.stringify(payload));
+
+    mainWS.send(JSON.stringify(payload));
+
+}
+
+// ================= MARK SEEN =================
+function markSeen(messageId) {
+
+    if (!mainWS || !loggedIn) return;
+
+    let payload = {
+        handler: "pvt_msg_status",
+        payload: {
+            message_id: messageId,
+            status: "seen"
+        }
+    };
+
+    mainWS.send(JSON.stringify(payload));
+
 }
 
 // ================= START SERVER =================
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
-    console.log("🚀 FUNBOT RUNNING ON", PORT);
+
+    console.log("🚀 FUNBOT RUNNING ON PORT", PORT);
+
 });
