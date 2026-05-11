@@ -912,126 +912,114 @@ ${this.cricket.wickets}`
                         return;
                     }
 
-                    // ================= QUIZ ANSWER =================
-                    if (
-                        this.currentAnswer !== null &&
-                        text === this.currentAnswer
-                    ) {
+   // ================= QUIZ ANSWER =================
+if (
+    this.currentAnswer !== null &&
+    text === this.currentAnswer
+) {
 
-                        clearInterval(
-                            this.repeatTimer
-                        );
+    // stop timer FIRST
+    clearInterval(this.repeatTimer);
 
-                        let speedSec =
-                            (
-                                Date.now() -
-                                this.questionStartTime
-                            ) / 1000;
+    // save answer before null
+    let correctAnswer = this.currentAnswer;
 
-                        speedSec =
-                            Number(
-                                speedSec.toFixed(2)
-                            );
+    // lock question immediately
+    this.currentAnswer = null;
 
-                        this.currentAnswer = null;
+    // calculate speed
+    let speedSec =
+        (Date.now() - this.questionStartTime) / 1000;
 
-                        // init
-                        if (
-                            !this.userScores[sender]
-                        ) {
+    speedSec = Number(speedSec.toFixed(2));
 
-                            this.userScores[sender] = {
+    // init user data
+    if (!this.userScores[sender]) {
 
-                                score: 0,
-                                best: null,
-                                last: null
-                            };
-                        }
+        this.userScores[sender] = {
 
-                        let u =
-                            this.userScores[sender];
+            score: 0,
+            best: null,
+            last: null
+        };
+    }
 
-                        let addScore = 10;
+    let u = this.userScores[sender];
 
-                        // SPEED SCORE
-                        if (
-                            speedSec >= 2 &&
-                            speedSec <= 4
-                        ) {
+    // default score
+    let addScore = 10;
 
-                            addScore = 100;
+    // ================= SPEED SCORE =================
+    if (speedSec >= 2 && speedSec <= 4) {
 
-                        } else if (
-                            speedSec >= 5 &&
-                            speedSec <= 7
-                        ) {
+        addScore = 100;
 
-                            addScore = 80;
+    } else if (speedSec >= 5 && speedSec <= 7) {
 
-                        } else if (
-                            speedSec >= 8 &&
-                            speedSec <= 10
-                        ) {
+        addScore = 80;
 
-                            addScore = 50;
-                        }
+    } else if (speedSec >= 8 && speedSec <= 10) {
 
-                        u.score += addScore;
+        addScore = 50;
+    }
 
-                        u.last = speedSec;
+    // add score
+    u.score += addScore;
 
-                        if (
-                            !u.best ||
-                            speedSec < u.best
-                        ) {
+    // update speed
+    u.last = speedSec;
 
-                            u.best = speedSec;
-                        }
+    if (!u.best || speedSec < u.best) {
 
-                        // ROOM SCORE
-                        if (
-                            !ROOM_SCORES[this.room]
-                        ) {
+        u.best = speedSec;
+    }
 
-                            ROOM_SCORES[this.room] = {};
-                        }
+    // ================= ROOM SCORE =================
+    if (!ROOM_SCORES[this.room]) {
 
-                        if (
-                            !ROOM_SCORES[this.room][sender]
-                        ) {
+        ROOM_SCORES[this.room] = {};
+    }
 
-                            ROOM_SCORES[this.room][sender] = 0;
-                        }
+    if (!ROOM_SCORES[this.room][sender]) {
 
-                        ROOM_SCORES[this.room][sender] += addScore;
+        ROOM_SCORES[this.room][sender] = 0;
+    }
 
-                        // GLOBAL SCORE
-                        if (
-                            !GLOBAL_SCORES[sender]
-                        ) {
+    ROOM_SCORES[this.room][sender] += addScore;
 
-                            GLOBAL_SCORES[sender] = 0;
-                        }
+    // ================= GLOBAL SCORE =================
+    if (!GLOBAL_SCORES[sender]) {
 
-                        GLOBAL_SCORES[sender] += addScore;
+        GLOBAL_SCORES[sender] = 0;
+    }
 
-                        this.send(
-`🏆 ${sender} correct!
+    GLOBAL_SCORES[sender] += addScore;
+
+    // ================= SEND RESULT =================
+    this.send(
+`🏆 ${sender} answered correctly!
+
+✅ Answer: ${correctAnswer}
 
 ⚡ Speed: ${speedSec}s
-➕ +${addScore} points
-📊 Total Score: ${u.score}`
-                        );
+➕ Score Gained: ${addScore}
+📊 Total Score: ${u.score}
 
-                        setTimeout(() => {
+🥇 Best Speed: ${u.best}s`
+    );
 
-                            this.nextQuestion();
+    // wait before next question
+    setTimeout(() => {
 
-                        }, 3000);
-                    }
+        if (this.settings.quiz) {
 
-                break;
-            }
+            this.nextQuestion();
+        }
+
+    }, 5000);
+
+    return;
+}
 
         } catch (err) {
 
